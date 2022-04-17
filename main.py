@@ -1,5 +1,4 @@
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from unicodedata import name
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 import datetime
 import openpyxl
