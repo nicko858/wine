@@ -1,8 +1,10 @@
-from http.server import HTTPServer, SimpleHTTPRequestHandler
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 import datetime
-import openpyxl
 from collections import defaultdict
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+from unicodedata import category
+
+import openpyxl
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 
 def get_company_age(company_founding_year):
@@ -24,32 +26,27 @@ def get_age_word_ending(age):
     return "лет"
 
 
-def parse_raw_catalog(excel_catalog_path):
+def get_grouped_product_catalog(excel_catalog_path):
     excel_obj = openpyxl.load_workbook(excel_catalog_path)
     sheet = excel_obj.active
-    category_column = 0
-    name_column = 1
-    sort_column = 2
-    price_column = 3
-    img_path_column = 4
-    stock_column = 5
-    indent_row = 2
-    wine_catalog = defaultdict(list)
-    for row in sheet.iter_rows(indent_row):
-        category = row[category_column].value
-        name = row[name_column].value
-        sort = row[sort_column].value
-        price = row[price_column].value
-        img_path = row[img_path_column].value
-        stock = row[stock_column].value
-        wine_catalog[category].append({
-            "name": name,
-            "sort": sort,
-            "price": price,
-            "img_path": "images/{}".format(img_path),
-            "stock": stock,
-        })
-    return wine_catalog
+    columns_names_idx = 0
+    product_data_slice = slice(1,None)
+    all_rows = [row for row in sheet.iter_rows()]
+    product_rows = all_rows[product_data_slice]
+    columns_names = [row.value for row in all_rows[columns_names_idx]]
+    grouped_product_catalog = defaultdict(list)
+    for row in product_rows:
+        column_values = [cell.value for cell in row]
+        category = column_values[0]
+        grouped_product_catalog[category].append(
+            dict(
+                zip(
+                    columns_names[product_data_slice],
+                    column_values[product_data_slice]
+                    )
+                )
+        )
+    return grouped_product_catalog
 
 
 if __name__ == "__main__":
@@ -58,13 +55,13 @@ if __name__ == "__main__":
     autoescape=select_autoescape(['html', 'xml'])
     )
     template = env.get_template('template.html')
-    raw_product_catalog = 'wine3.xlsx'
-    product_catalog = parse_raw_catalog(raw_product_catalog)
+    product_catalog_path = 'wine3.xlsx'
+    product_catalog = get_grouped_product_catalog(product_catalog_path)
     company_founding_year = 1920
     company_age = get_company_age(company_founding_year)
     age_word_ending = get_age_word_ending(company_age)
     rendered_page = template.render(
-        wine_catalog = product_catalog,
+        product_catalog = product_catalog,
         company_age = company_age,
         age_word_ending = age_word_ending
     )
