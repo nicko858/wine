@@ -1,9 +1,8 @@
 import datetime
 from collections import defaultdict
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from unicodedata import category
 
-import openpyxl
+import pandas as pd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 
@@ -26,27 +25,16 @@ def get_age_word_ending(age):
     return "лет"
 
 
-def get_grouped_product_catalog(excel_catalog_path):
-    excel_obj = openpyxl.load_workbook(excel_catalog_path)
-    sheet = excel_obj.active
-    columns_names_idx = 0
-    product_data_slice = slice(1,None)
-    all_rows = [row for row in sheet.iter_rows()]
-    product_rows = all_rows[product_data_slice]
-    columns_names = [row.value for row in all_rows[columns_names_idx]]
-    grouped_product_catalog = defaultdict(list)
-    for row in product_rows:
-        column_values = [cell.value for cell in row]
-        category = column_values[0]
-        grouped_product_catalog[category].append(
-            dict(
-                zip(
-                    columns_names[product_data_slice],
-                    column_values[product_data_slice]
-                    )
-                )
-        )
-    return grouped_product_catalog
+def get_grouped_product_catalog(product_catalog_path):
+    products = pd.read_excel(
+        product_catalog_path,
+        na_values=None,
+        keep_default_na=False
+        ).to_dict(orient='records')
+    grouped_products = defaultdict(list)
+    for product in products:
+        grouped_products[product['Категория']].append(product)
+    return grouped_products
 
 
 if __name__ == "__main__":
@@ -55,7 +43,7 @@ if __name__ == "__main__":
     autoescape=select_autoescape(['html', 'xml'])
     )
     template = env.get_template('template.html')
-    product_catalog_path = 'wine3.xlsx'
+    product_catalog_path = 'product_catalog.xlsx'
     product_catalog = get_grouped_product_catalog(product_catalog_path)
     company_founding_year = 1920
     company_age = get_company_age(company_founding_year)
