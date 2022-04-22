@@ -1,9 +1,30 @@
+import argparse
 import datetime
 from collections import defaultdict
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+from os.path import dirname, isfile, join, realpath
 
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+
+def is_valid_file(arg):
+    if isfile(arg):
+        return arg
+    raise argparse.ArgumentTypeError(
+        'The file {0} does not exist!'.format(arg),
+    )
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--product_catalog_path',
+        type=is_valid_file,
+        default=join(dirname(realpath(__file__)), 'product_catalog.xlsx'),
+        help='Specify the path to product catalog',
+    )
+    return parser.parse_args()
 
 
 def get_company_age(company_founding_year):
@@ -38,12 +59,13 @@ def get_grouped_product_catalog(product_catalog_path):
 
 
 if __name__ == '__main__':
+    args = get_args()
     env = Environment(
         loader=FileSystemLoader('.'),
         autoescape=select_autoescape(['html', 'xml']),
     )
     template = env.get_template('template.html')
-    product_catalog_path = 'product_catalog.xlsx'
+    product_catalog_path = args.product_catalog_path
     product_catalog = get_grouped_product_catalog(product_catalog_path)
     company_founding_year = 1920
     company_age = get_company_age(company_founding_year)
